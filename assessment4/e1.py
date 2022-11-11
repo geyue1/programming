@@ -1,3 +1,6 @@
+from typing import Type
+
+
 class WordBase:
   def __init__(self, basic_form):
     self.basic_form = basic_form
@@ -78,13 +81,114 @@ class ToBe(Verb):
     def get_forms(self):
         return ["be", "am", "is", "are", "was", "were", "been","beeing"]
 
+class IdenticalWordComparator(WordComparator):
+    def match(self, word1, word2):
+        return True if word1==word2 else False
+
+class OneSymbolDiffComparator(WordComparator):
+    def match(self, word1, word2):
+        if len(word1)==len(word2):
+            temp = []
+            list1 = list(word1)
+            list2= list(word2)
+            i=0
+            while i< len(list1):
+                if list1[i]!=list2[i]:
+                    temp.append(list1[i])
+                    temp.append(list2[i])
+                i+=1
+            return True if len(temp)==2 else False
+        return False
+
+class SwapTwoSymbolsComparator(WordComparator):
+    def match(self, word1, word2):
+        if len(word1)==len(word2) and word1!=word2:
+            list1 = list(word1)
+            list2 = list(word2)
+            i = 0
+            while i<(len(list1)-1):
+                if list1[i]==list2[i] and list1[i+1]== list2[i+1] and list1[i]!=list1[i+1]:
+                    return True
+        return False
 class Spellchecker:
+
+    dictionary = {}
+    key_noun = "N"
+    key_verb = "V"
+
 
     def __init__(self):
         pass
 
-    def add_word(self,word:WordBase):
+    def add_word(self,wordBase:WordBase):
+        if wordBase.basic_form in self.dictionary:
+            if isinstance(wordBase, Noun):
+                self.dictionary.get(wordBase.basic_form).update(self.key_noun,wordBase.get_forms())
+            else:
+                self.dictionary.get(wordBase.basic_form).update(self.key_verb, wordBase.get_forms())
+        else:
+            word_forms = {}
+            if isinstance(wordBase,Noun):
+                word_forms = {self.key_noun:wordBase.get_forms()}
+            else:
+                word_forms = {self.key_verb: wordBase.get_forms()}
+            self.dictionary.update({wordBase.basic_form:word_forms})
+
+    def delete_word(self,word:string,type:Type):
+        if word in self.dictionary:
+            forms:{} = self.dictionary.get(word)
+            if isinstance(type,Noun) and (self.key_noun in forms):
+                forms.pop(self.key_noun)
+            elif isinstance(type,Verb) and (self.key_verb in forms):
+                forms.pop(self.key_verb)
+            if len(forms) ==0:
+                self.dictionary.pop(word)
+
+    def get_all_words(self):
+        words = []
+        for _,v in self.dictionary.items():
+            for _,v_ in v.items():
+                words.append(v)
+
+        return words
+    def get_all_forms(self,word:string):
+        forms = []
+        if word in self.dictionary:
+            for _,v in self.dictionary.get(word).items():
+                forms.append(v)
+        return forms
+
+    def is_correct_sentence(self,sentence:string):
+        words = sentence.split(" ")
+        all_words = self.get_all_words()
+        for word in words:
+            if(all_words.count(word)<=0):
+                return False
+        return True
+
+    def find_matches(self,word:string,wordComparators:[]):
+        result = []
+        all_forms = self.get_all_forms(word)
+        for comparator in wordComparators:
+            for word_form in all_forms:
+                if comparator.match(word,word_form):
+                    result.append(word_form)
+        return result
+
+    def autocorrect_word(self,word:string,wordComparators:[]):
+        pass
+
+    def autocorrect_sentence(self,sentence:string,wordComparators:[]):
+        pass
+
+    def __str__(self):
+        print(self.dictionary)
 
 if __name__ == "__main__":
     noun = Noun("apple")
     print(noun.get_forms())
+
+    checker = Spellchecker()
+    checker.add_word(Noun("put"))
+    checker.add_word(noun)
+    checker.__str__()
