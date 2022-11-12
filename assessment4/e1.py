@@ -168,19 +168,34 @@ class Spellchecker:
 
     def find_matches(self,word:string,wordComparators:[]):
         result = []
-        all_forms = self.get_all_forms(word)
+        all_words = self.get_all_words()
         for comparator in wordComparators:
-            for word_form in all_forms:
+            for word_form in all_words:
                 if comparator.match(word,word_form):
                     result.append(word_form)
         return result
 
     def autocorrect_word(self,word:string,wordComparators:[]):
-        pass
+        all_words = self.get_all_words()
+        for comparator in wordComparators:
+            result = []
+            for word_form in all_words:
+                if comparator.match(word, word_form):
+                    result.append(word_form)
+            if len(result)>0:
+                result.sort()
+                return result[0]
+        return word
+
+
 
     def autocorrect_sentence(self,sentence:string,wordComparators:[]):
-        pass
-
+        words = sentence.split(" ")
+        temp = []
+        for word in words:
+            correct_word = self.autocorrect_word()
+            temp.append(correct_word)
+        return " ".join(temp)
     def __str__(self):
         print(self.dictionary)
 
