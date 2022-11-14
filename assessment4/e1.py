@@ -1,4 +1,4 @@
-from typing import Type
+
 
 
 class WordBase:
@@ -20,6 +20,7 @@ class WordComparator:
 
 ######### start ################
 import string
+from typing import Type
 class Noun(WordBase):
     def __init__(self,basic_form:string):
         super().__init__(basic_form)
@@ -59,14 +60,16 @@ class IrregularVerb(Verb):
     past_tense: string = None
     past_participle:string = None
 
-    def __init__(self,basic_form:string,past_tense:string,past_participle:string):
+    def __init__(self,basic_form:string,*x):
         super().__init__(basic_form)
-        self.past_tense = past_tense
-        self.past_participle = past_participle
-    def __init__(self,basic_form:string,past_tense:string):
-        super().__init__(basic_form)
-        self.past_tense = past_tense
-        self.past_participle = past_tense
+        if  len(x) == 1:
+            self.past_tense = x[0]
+            self.past_participle=x[0]
+        elif len(x)==2:
+           self.past_tense = x[0]
+           self.past_participle = x[1]
+        else:
+            raise TypeError
 
     def get_forms(self):
         a = self.basic_form + "es" if self.basic_form.endswith("s") else self.basic_form + "s"
@@ -79,7 +82,7 @@ class ToBe(Verb):
         pass
 
     def get_forms(self):
-        return ["be", "am", "is", "are", "was", "were", "been","beeing"]
+        return ["be", "am", "is", "are", "was", "were", "been","being"]
 
 class IdenticalWordComparator(WordComparator):
     def match(self, word1, word2):
@@ -109,6 +112,7 @@ class SwapTwoSymbolsComparator(WordComparator):
             while i<(len(list1)-1):
                 if list1[i]==list2[i] and list1[i+1]== list2[i+1] and list1[i]!=list1[i+1]:
                     return True
+                i+=1
         return False
 class Spellchecker:
 
@@ -123,9 +127,9 @@ class Spellchecker:
     def add_word(self,wordBase:WordBase):
         if wordBase.basic_form in self.dictionary:
             if isinstance(wordBase, Noun):
-                self.dictionary.get(wordBase.basic_form).update(self.key_noun,wordBase.get_forms())
+                self.dictionary.get(wordBase.basic_form).update({self.key_noun:wordBase.get_forms()})
             else:
-                self.dictionary.get(wordBase.basic_form).update(self.key_verb, wordBase.get_forms())
+                self.dictionary.get(wordBase.basic_form).update({self.key_verb:wordBase.get_forms()})
         else:
             word_forms = {}
             if isinstance(wordBase,Noun):
@@ -137,9 +141,9 @@ class Spellchecker:
     def delete_word(self,word:string,type:Type):
         if word in self.dictionary:
             forms:{} = self.dictionary.get(word)
-            if isinstance(type,Noun) and (self.key_noun in forms):
+            if issubclass(type,Noun) and (self.key_noun in forms):
                 forms.pop(self.key_noun)
-            elif isinstance(type,Verb) and (self.key_verb in forms):
+            elif issubclass(type,Verb) and (self.key_verb in forms):
                 forms.pop(self.key_verb)
             if len(forms) ==0:
                 self.dictionary.pop(word)
@@ -148,14 +152,16 @@ class Spellchecker:
         words = []
         for _,v in self.dictionary.items():
             for _,v_ in v.items():
-                words.append(v)
+                for word in v_:
+                   words.append(word)
 
         return words
     def get_all_forms(self,word:string):
         forms = []
         if word in self.dictionary:
             for _,v in self.dictionary.get(word).items():
-                forms.append(v)
+                for word in v:
+                   forms.append(word)
         return forms
 
     def is_correct_sentence(self,sentence:string):
@@ -193,17 +199,29 @@ class Spellchecker:
         words = sentence.split(" ")
         temp = []
         for word in words:
-            correct_word = self.autocorrect_word()
+            correct_word = self.autocorrect_word(word,wordComparators)
             temp.append(correct_word)
         return " ".join(temp)
     def __str__(self):
         print(self.dictionary)
 
 if __name__ == "__main__":
-    noun = Noun("apple")
-    print(noun.get_forms())
+    print(isinstance(Noun("cat"), WordBase))
+    print(isinstance(Verb("move"), WordBase))
+    print(set(Noun("cat").get_forms()) == {"cat", "cats"})
+    print(set(Verb("move").get_forms()) == {"move", "moving", "moved", "moves"})
+    print(set(IrregularVerb("go", "went", "gone").get_forms()))
+    print(set(IrregularVerb("go", "went", "gone").get_forms()) == {"go", "went", "gone", "going", "gos"})
 
-    checker = Spellchecker()
-    checker.add_word(Noun("put"))
-    checker.add_word(noun)
-    checker.__str__()
+    check = Spellchecker()
+    check.add_word(Verb("please"))
+    check.add_word(Verb("cat"))
+    check.add_word(IrregularVerb("put","puttted"))
+    check.add_word(Noun("put"))
+    #check.add_word(IrregularVerb("puttt"))
+    #check.add_word(IrregularNoun("puttings"))
+    check.__str__()
+    check.delete_word("put",Verb)
+    print(check.get_all_forms("put"))
+    print(check.autocorrect_word("pleese",[SwapTwoSymbolsComparator()]))
+    print(check.autocorrect_sentence("cads are lovley", [OneSymbolDiffComparator()]))
